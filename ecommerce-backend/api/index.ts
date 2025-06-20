@@ -1,21 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { Server } from 'http';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { INestApplication } from '@nestjs/common';
 
-let cachedServer: Server;
+let cachedApp: INestApplication;
 
-async function bootstrapServer(): Promise<Server> {
+async function bootstrapApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
   await app.init();
-  return app.getHttpAdapter().getInstance();
+  return app;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!cachedServer) {
-    cachedServer = await bootstrapServer();
+  if (!cachedApp) {
+    cachedApp = await bootstrapApp();
   }
-  return cachedServer(req, res);
+  const instance = cachedApp.getHttpAdapter().getInstance();
+  return instance(req, res);
 } 
